@@ -4,8 +4,10 @@ import numpy as np
 import faiss
 from flask import Flask, request, jsonify
 from PyPDF2 import PdfReader
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 # Load the Universal Sentence Encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")

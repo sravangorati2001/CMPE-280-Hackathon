@@ -149,7 +149,6 @@
                             <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
                                 data-bs-parent="#accordionExample">
                                 <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                                    <!-- Add debt-related indicators here -->
                                     <li><a href="#" class="link-dark rounded" id="debt" draggable="true"
                                             ondragstart="drag(event)" onclick="onClickMenuItem('debt')">Total Debt
                                             Service</a>
@@ -170,9 +169,9 @@
                     </ul>
 
                     <!-- Chat Button -->
-                    <div class="redirect-container" style="text-align:center; margin-top: 20px;">
-                        <button onclick="window.location.href='http://localhost:6001'" type="button"
-                            class="btn btn-secondary">Chat With Us</button>
+                    <div class="redirect-container text-center mt-3">
+                        <button type="button" class="btn btn-secondary" onclick="toggleChat()">Chat With Us</button>
+                        <span class="close-chat" onclick="toggleChat()">×</span>
                     </div>
                 </div>
             </nav>
@@ -200,10 +199,10 @@
 
                 <!-- Drag and Drop Area -->
                 <div id="draggable_playground">
-                    <div class="dragdroparea">
+                    <div class="dragdroparea" ondrop="drop(event)" ondragover="allowDrop(event)">
                         <table class="contactSummary">
                             <tr>
-                                <td class="div1" ondrop="drop(event)" ondragover="allowDrop(event)"></td>
+                                <td class="div1"></td>
                             </tr>
                             <!-- Add more rows as needed -->
                         </table>
@@ -214,14 +213,107 @@
                 <div id="predict" style="display:none;margin-top:100px;margin-bottom:2500px;">
                     <!-- Prediction content -->
                 </div>
-
-                <!-- Highcharts Container (if needed) -->
-                <!-- The charts will be dynamically created and appended -->
-
             </main>
         </div>
     </div>
 
+    <!-- Chat Box (persistent floating box) -->
+<div class="chat-box" id="chatBox">
+    <div class="chat-box-header">
+        Chat With Us
+        <span class="close-chat" onclick="toggleChat()">×</span>
+    </div>
+    <div class="chat-box-content" id="chatContent">
+        <p>Welcome! How can we help you today?</p>
+    </div>
+    <div class="chat-box-footer">
+        <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+
+    <!-- Drag and Drop Script -->
+    <script>
+        // Drag functions
+        function toggleChat() {
+            const chatBox = document.getElementById('chatBox');
+            if (chatBox) {
+                chatBox.classList.toggle('show'); // Add a CSS class for visibility
+            } else {
+                console.error("Chat box element not found.");
+            }
+        }
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        function drag(event) {
+            event.dataTransfer.setData("text", event.target.id);
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            const data = event.dataTransfer.getData("text");
+            const draggedElement = document.getElementById(data);
+
+            if (draggedElement) {
+                const dropTarget = event.target;
+
+                // Clone the dragged element and append it to the drop target
+                if (!dropTarget.contains(draggedElement)) {
+                    dropTarget.appendChild(draggedElement.cloneNode(true));
+                }
+            }
+        }
+        function toggleChat() {
+                var chatBox = document.getElementById("chatBox");
+                chatBox.style.display = chatBox.style.display === "none" ? "block" : "none";
+            }
+
+            // Handle "Enter" key press to send message
+            function handleKeyPress(event) {
+                if (event.key === "Enter") {
+                    sendMessage();
+                }
+            }
+
+            // Function to send message to the API and display response
+            function sendMessage() {
+                const userInput = document.getElementById("userInput").value;
+                const chatContent = document.getElementById("chatContent");
+
+                // Display user's message in the chat
+                const userMessage = document.createElement("p");
+                userMessage.innerHTML = `<strong>You:</strong> ${userInput}`;
+                chatContent.appendChild(userMessage);
+
+                // Send POST request to the API
+                fetch("http://127.0.0.1:5000/query", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ "query": userInput })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Display API's response in the chat
+                        const botMessage = document.createElement("p");
+                        botMessage.innerHTML = `<strong>Bot:</strong> ${data.answer}`;
+                        chatContent.appendChild(botMessage);
+
+                        // Clear the input box after sending
+                        document.getElementById("userInput").value = "";
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        const errorMessage = document.createElement("p");
+                        errorMessage.innerHTML = `<strong>Bot:</strong> Sorry, something went wrong. Please try again later.`;
+                        chatContent.appendChild(errorMessage);
+                    });
+            }
+    </script>
 </body>
 
 </html>

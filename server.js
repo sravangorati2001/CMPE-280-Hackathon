@@ -44,94 +44,117 @@ function getColumnName(indicator, countryName) {
     case 'gdp':
       return `GDP (current US$) ${countryName}`;
     case 'gdp_growth':
-      return `GDP Growth Rate (%) ${countryName}`;
-    // Add cases for other indicators
+          return `GDP growth (annual %) ${countryName}`; // Adjusted for gdp_growth
+    case 'fdi_in':
+          return `Foreign direct investment, net inflows (% of GDP) ${countryName}`;
+    case 'fdi_out':
+          return `Foreign direct investment, net outflows (BoP, current US$) ${countryName}`; // Added for fdi_out
+    case 'current_account_balance':
+          return `${countryName}`;
+    case 'fdi_net_outflows_percent_gdp':
+          return `Foreign direct investment, net outflows (% of GDP) ${countryName}`; // Added for fdi_netoutflows
+    case 'agri_growth':
+          return `${countryName}`;
+    case 'manufacturing':
+          return `${countryName}`;
+    case 'fertilizer_consumption':
+          return `${countryName}`;
+    case 'fertilizer_production':
+          return `${countryName}`;
     default:
       return null;
   }
 }
 
 app.post('/api/data', (req, res) => {
-    const { country, indicator, startYear, endYear } = req.body;
+  const { country, indicator, startYear, endYear } = req.body;
 
-    // Validate input
-    if (!country || !indicator) {
-        return res.status(400).json({ error: 'Country and indicator are required.' });
-    }
+  // Validate input
+  if (!country || !indicator) {
+    return res.status(400).json({ error: 'Country and indicator are required.' });
+  }
 
-    // Map country code to country name
-    const countryName = countryCodes[country];
-    if (!countryName) {
-        return res.status(400).json({ error: 'Invalid country.' });
-    }
+  // Map country code to country name
+  const countryName = countryCodes[country];
+  if (!countryName) {
+    return res.status(400).json({ error: 'Invalid country.' });
+  }
 
-    // Get the file path for the indicator
-    const filePath = indicatorFiles[indicator];
-    if (!filePath) {
-        return res.status(400).json({ error: 'Invalid indicator.' });
-    }
+  // Get the file path for the indicator
+  const filePath = indicatorFiles[indicator];
+  if (!filePath) {
+    return res.status(400).json({ error: 'Invalid indicator.' });
+  }
 
-    // Check if the file exists
-    if (!fs.existsSync(filePath)) {
-        console.error('Data file not found:', filePath);
-        return res.status(404).json({ error: 'Data not found.' });
-    }
+  // Check if the file exists
+  if (!fs.existsSync(filePath)) {
+    console.error('Data file not found:', filePath);
+    return res.status(404).json({ error: 'Data not found.' });
+  }
 
-    // Handle Excel files separately if any (not shown here)
+  const results = [];
 
-   const results = [];
+  fs.createReadStream(filePath)
+    .pipe(csv({ bom: true }))
+    .on('data', (data) => {
+      console.log('Row data:', data); // Log to inspect keys
 
-fs.createReadStream(filePath)
-  .pipe(csv({ bom: true }))
-  .on('data', (data) => {
-    console.log('Row data:', data); // Log to inspect keys
-
-    // Convert keys to lowercase and trim them for consistent access
-    const row = {};
-    for (const key in data) {
-      row[key.trim().toLowerCase()] = data[key];
-    }
-
-    const year = parseInt(row['year'], 10); // Access 'year' in lowercase
-
-    const columnName = getColumnName(indicator, countryName);
-    if (!columnName) {
-      console.error('Invalid indicator or country for column mapping.');
-      return;
-    }
-
-    console.log(`Processing Year: ${year}, Column: ${columnName}`);
-    
-    const value = parseFloat(row[columnName.trim().toLowerCase()].replace(/,/g, ''));
-
-    if (!isNaN(value) && !isNaN(year)) {
-      if ((!startYear || year >= startYear) && (!endYear || year <= endYear)) {
-        results.push({ Year: year, Value: value });
-        console.log(`Added data point: Year ${year}, Value ${value}`);
-      } else {
-        console.log(`Year ${year} is outside the range ${startYear}-${endYear}`);
+      // Convert keys to lowercase and trim them for consistent access
+      const row = {};
+      for (const key in data) {
+        row[key.trim().toLowerCase()] = data[key];
       }
-    } else {
-      console.log(`Invalid value or year for ${columnName} in year ${year}`);
-    }
-  })
-  .on('end', () => {
-    if (results.length === 0) {
-      console.error('No data was collected.');
-      return res.status(404).json({ error: 'No data available for the selected parameters.' });
-    }
-    results.sort((a, b) => a.Year - b.Year);
-    res.json(results);
-  })
-  .on('error', (err) => {
-    console.error('Error reading CSV file:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  });
 
-})
+     if (indicator === 'agri_growth' || indicator === 'manufacturing' || indicator === 'fertilizer_consumption') {
+        for (let year = startYear; year <= endYear; year++) {
+          const yearValue = row[year.toString()];
+          const value = parseFloat(yearValue?.replace(/,/g, ''));
 
-    // Start the server
-    app.listen(port, () => {
-        console.log(`Server is running on http://localhost:${port}`);
+          if (!isNaN(value)) {
+            results.push({ Year: year, Value: value });
+            console.log(`Added data point: Year ${year}, Value ${value}`);
+          } else {
+            console.log(`Invalid value for ${countryName} in year ${year}`);
+          }
+        }
+      } else {
+        // General handling for other indicators
+        const year = parseInt(row['year'], 10);
+        const columnName = getColumnName(indicator, countryName);
+        if (!columnName) {
+          console.error('Invalid indicator or country for column mapping.');
+          return;
+        }
+
+        const value = parseFloat(row[columnName.trim().toLowerCase()]?.replace(/,/g, ''));
+
+        if (!isNaN(value) && !isNaN(year)) {
+          if ((!startYear || year >= startYear) && (!endYear || year <= endYear)) {
+            results.push({ Year: year, Value: value });
+            console.log(`Added data point: Year ${year}, Value ${value}`);
+          } else {
+            console.log(`Year ${year} is outside the range ${startYear}-${endYear}`);
+          }
+        } else {
+          console.log(`Invalid value or year for ${columnName} in year ${year}`);
+        }
+      }
+    })
+    .on('end', () => {
+      if (results.length === 0) {
+        console.error('No data was collected.');
+        return res.status(404).json({ error: 'No data available for the selected parameters.' });
+      }
+      results.sort((a, b) => a.Year - b.Year);
+      res.json(results);
+    })
+    .on('error', (err) => {
+      console.error('Error reading CSV file:', err);
+      res.status(500).json({ error: 'Internal Server Error' });
     });
+});
 
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});

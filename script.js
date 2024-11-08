@@ -91,6 +91,36 @@ document.addEventListener('DOMContentLoaded', () => {
       renderChart(data, indicator, chartContainerId);
     });
   }
+    
+    function allowDrop(event) {
+        event.preventDefault();
+}
+function toggleChat() {
+        const chatBox = document.getElementById('chatBox');
+        if (chatBox) {
+            chatBox.classList.toggle('show'); // Add a CSS class for visibility
+        } else {
+            console.error("Chat box element not found.");
+        }
+    }
+function drag(event) {
+    event.dataTransfer.setData("text", event.target.id);
+}
+
+function drop(event) {
+    event.preventDefault();
+    const data = event.dataTransfer.getData("text");
+    const draggedElement = document.getElementById(data);
+
+    if (draggedElement) {
+        const dropTarget = event.target;
+        
+        // Check if it's already in the drop zone
+        if (!dropTarget.contains(draggedElement)) {
+            dropTarget.appendChild(draggedElement.cloneNode(true));
+        }
+    }
+}
 
   // Menu item click handler
   function onClickMenuItem(indicator) {
