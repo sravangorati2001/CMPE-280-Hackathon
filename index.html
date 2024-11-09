@@ -43,15 +43,27 @@
 
         <!-- Country Selection Dropdown -->
         <div class="nav-item dropdown ms-auto">
-            <select class="form-select" aria-label="Country select" id="countrySelect">
-                <option value="1" selected>USA</option>
-                <option value="2">India</option>
-                <option value="3">China</option>
-                <option value="4">Ecuador</option>
+            <select class="form-select" aria-label="Country select" id="countrySelect" style="padding-left: 20px;">
+                <option value="1" data-flag="🇺🇸">🇺🇸 USA</option>
+                <option value="2" data-flag="🇮🇳">🇮🇳 India</option>
+                <option value="3" data-flag="🇨🇳">🇨🇳 China</option>
+                <option value="4" data-flag="🇪🇨">🇪🇨 Ecuador</option>
                 <!-- Add more countries as needed -->
             </select>
         </div>
     </header>
+    <style>
+        .form-select {
+            background-position: right 0.95rem center, left 0.75rem center;
+            background-size: 36px 12px, 20px auto;
+            appearance: none;
+        }
+    
+        /* Ensure proper spacing for the flag and text */
+        .form-select option {
+            padding: 5px 5px 35px 30px;
+        }
+    </style>
 
     <div class="container-fluid">
         <div class="row">
@@ -184,13 +196,21 @@
                         <span id="range1">1961</span>
                         <span> &dash; </span>
                         <span id="range2">2020</span>
-                        <br />
                     </div>
                     <div>
                         <button type="button" class="btn btn-primary">Annotation</button>
                     </div>
                     <div class="container2">
                         <div class="slider-track"></div>
+                        <div class="range-markers">
+                            <div class="marker">1961</div>
+                            <div class="marker">1970</div>
+                            <div class="marker">1980</div>
+                            <div class="marker">1990</div>
+                            <div class="marker">2000</div>
+                            <div class="marker">2010</div>
+                            <div class="marker">2020</div>
+                        </div>
                         <input type="range" min="1961" max="2020" value="1961" id="slider-1" oninput="slideOne()">
                         <input type="range" min="1961" max="2020" value="2020" id="slider-2" oninput="slideTwo()">
                     </div>
@@ -218,102 +238,35 @@
     </div>
 
     <!-- Chat Box (persistent floating box) -->
+<button class="chat-toggle-btn" onclick="toggleChat()">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT Logo">
+    Chat With Us
+</button>
+
+<!-- Chat Box -->
 <div class="chat-box" id="chatBox">
     <div class="chat-box-header">
-        Chat With Us
+        <div style="display: flex; align-items: center;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT Logo"
+                class="chatgpt-logo">
+            Chat With Us
+        </div>
         <span class="close-chat" onclick="toggleChat()">×</span>
     </div>
     <div class="chat-box-content" id="chatContent">
-        <p>Welcome! How can we help you today?</p>
+        <p>Welcome! How can I assist you today?</p>
     </div>
     <div class="chat-box-footer">
-        <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
-        <button onclick="sendMessage()">Send</button>
+        <input type="text" id="userInput" placeholder="Type your question..." onkeypress="handleKeyPress(event)">
+        <button class="send-button" onclick="sendMessage()">
+            Send
+        </button>
     </div>
 </div>
 
 
     <!-- Drag and Drop Script -->
-    <script>
-        // Drag functions
-        function toggleChat() {
-            const chatBox = document.getElementById('chatBox');
-            if (chatBox) {
-                chatBox.classList.toggle('show'); // Add a CSS class for visibility
-            } else {
-                console.error("Chat box element not found.");
-            }
-        }
-        function allowDrop(event) {
-            event.preventDefault();
-        }
-
-        function drag(event) {
-            event.dataTransfer.setData("text", event.target.id);
-        }
-
-        function drop(event) {
-            event.preventDefault();
-            const data = event.dataTransfer.getData("text");
-            const draggedElement = document.getElementById(data);
-
-            if (draggedElement) {
-                const dropTarget = event.target;
-
-                // Clone the dragged element and append it to the drop target
-                if (!dropTarget.contains(draggedElement)) {
-                    dropTarget.appendChild(draggedElement.cloneNode(true));
-                }
-            }
-        }
-        function toggleChat() {
-                var chatBox = document.getElementById("chatBox");
-                chatBox.style.display = chatBox.style.display === "none" ? "block" : "none";
-            }
-
-            // Handle "Enter" key press to send message
-            function handleKeyPress(event) {
-                if (event.key === "Enter") {
-                    sendMessage();
-                }
-            }
-
-            // Function to send message to the API and display response
-            function sendMessage() {
-                const userInput = document.getElementById("userInput").value;
-                const chatContent = document.getElementById("chatContent");
-
-                // Display user's message in the chat
-                const userMessage = document.createElement("p");
-                userMessage.innerHTML = `<strong>You:</strong> ${userInput}`;
-                chatContent.appendChild(userMessage);
-
-                // Send POST request to the API
-                fetch("http://127.0.0.1:5000/query", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ "query": userInput })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        // Display API's response in the chat
-                        const botMessage = document.createElement("p");
-                        botMessage.innerHTML = `<strong>Bot:</strong> ${data.answer}`;
-                        chatContent.appendChild(botMessage);
-
-                        // Clear the input box after sending
-                        document.getElementById("userInput").value = "";
-                    })
-                    .catch(error => {
-                        console.error("Error:", error);
-                        const errorMessage = document.createElement("p");
-                        errorMessage.innerHTML = `<strong>Bot:</strong> Sorry, something went wrong. Please try again later.`;
-                        chatContent.appendChild(errorMessage);
-                    });
-            }
-    </script>
+    
 </body>
 
 </html>
