@@ -4,6 +4,9 @@
 This project is a web-based dashboard that visualizes macroeconomic and food security data, featuring time series graphs and a chatbot interface for data queries. It was developed as part of the CMPE 280 Hackathon.
 
 ## Project Demo
+
+## Link: https://youtu.be/elJIw6k2PEA
+
 https://github.com/user-attachments/assets/18032f95-454a-417a-a684-c7bff5715403
 
 ## Features
