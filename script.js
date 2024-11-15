@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global variables
     let cloneId;
     let cnt = 0;
+    let playbackInterval;
+    let isPlaying = false;
+    let chartInstance;
 
     // API Functions
     function getDataFromAPI(country, indicator) {
@@ -16,8 +19,26 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ country, indicator, startYear, endYear }),
         })
         .then((response) => response.json())
+        .then((data) => {
+            console.log('Data received from API:', data); // Debugging line
+            return data;
+        })
         .catch((error) => {
             console.error('Error fetching data:', error);
+        });
+    }
+
+    // Update Chart
+    function updateChart() {
+        const country = document.querySelector('#countrySelect').value;
+        const indicator = cloneId; // or set this to the selected indicator
+
+        getDataFromAPI(country, indicator).then((data) => {
+            if (data && data.length > 0) {
+                renderChart(data, indicator, 'chartContainer');
+            } else {
+                console.warn("No data available to render chart.");
+            }
         });
     }
 
@@ -26,29 +47,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const years = data.map((item) => item.Year);
         const values = data.map((item) => parseFloat(item.Value));
 
-        Highcharts.chart(containerId, {
-            chart: {
-                type: 'line',
-            },
-            title: {
-                text: `${indicator.toUpperCase()} Over Years`,
-            },
-            xAxis: {
-                categories: years,
-                title: {
-                    text: 'Year',
+        if (chartInstance) {
+            // Update the existing chart if it already exists
+            chartInstance.series[0].setData(values, true);
+            chartInstance.xAxis[0].setCategories(years, true);
+        } else {
+            // Create a new chart instance if it doesn't exist
+            chartInstance = Highcharts.chart(containerId, {
+                chart: {
+                    type: 'line',
                 },
-            },
-            yAxis: {
                 title: {
-                    text: indicator.toUpperCase(),
+                    text: `${indicator.toUpperCase()} Over Years`,
                 },
-            },
-            series: [{
-                name: indicator.toUpperCase(),
-                data: values,
-            }],
-        });
+                xAxis: {
+                    categories: years,
+                    title: {
+                        text: 'Year',
+                    },
+                },
+                yAxis: {
+                    title: {
+                        text: indicator.toUpperCase(),
+                    },
+                },
+                series: [{
+                    name: indicator.toUpperCase(),
+                    data: values,
+                }],
+            });
+        }
     }
 
     // Drag and Drop Functions
@@ -62,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drop(ev) {
         ev.preventDefault();
-        const country = document.querySelector('#countrySelect').value || '1';
+        const country = document.querySelector('#countrySelect').value;
         const indicator = cloneId;
 
         getDataFromAPI(country, indicator).then((data) => {
@@ -84,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Menu Functions
     function onClickMenuItem(indicator) {
-        const country = document.querySelector('#countrySelect').value || '1';
+        const country = document.querySelector('#countrySelect').value;
 
         getDataFromAPI(country, indicator).then((data) => {
             if (data.error) {
@@ -118,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         displayValOne.textContent = sliderOne.value;
         fillColor();
+        updateChart();
     }
 
     function slideTwo() {
@@ -131,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         displayValTwo.textContent = sliderTwo.value;
         fillColor();
+        updateChart();
     }
 
     function fillColor() {
@@ -144,7 +174,46 @@ document.addEventListener('DOMContentLoaded', () => {
         sliderTrack.style.background = `linear-gradient(to right, #dadae5 ${percent1}%, #2C3E50 ${percent1}%, #007bc2 ${percent2}%, #dadae5 ${percent2}%)`;
     }
 
-    // Chat Functions
+    // Playback Functions
+    function startPlayback() {
+        const playbackIcon = document.getElementById("playbackIcon");
+
+        if (isPlaying) {
+            stopPlayback();
+            playbackIcon.src = "https://icons.veryicon.com/png/o/miscellaneous/block-icon-library/video-playback-3.png"; // Play icon
+            playbackIcon.alt = "Play";
+            return;
+        }
+
+        isPlaying = true;
+        playbackIcon.src = "https://icons.veryicon.com/png/o/miscellaneous/block-icon-library/video-pause-3.png"; // Pause icon
+        playbackIcon.alt = "Pause";
+
+        const startYear = parseInt(document.getElementById("slider-1").value);
+        const endYear = parseInt(document.getElementById("slider-2").value);
+        let currentYear = startYear;
+
+        playbackInterval = setInterval(() => {
+            if (currentYear > endYear) {
+                stopPlayback();
+                playbackIcon.src = "https://icons.veryicon.com/png/o/miscellaneous/block-icon-library/video-playback-3.png"; // Reset to play icon
+                playbackIcon.alt = "Play";
+                return;
+            }
+
+            document.getElementById("slider-1").value = currentYear;
+            document.getElementById("range1").innerText = currentYear; // Update displayed start year
+            slideOne(); // Call existing function to handle other updates
+            currentYear++;
+        }, 500); // Adjust interval time for speed
+    }
+
+    function stopPlayback() {
+        clearInterval(playbackInterval);
+        isPlaying = false;
+    }
+
+    // Chat and Message Functions
     function toggleChat() {
         const chatBox = document.getElementById('chatBox');
         if (chatBox) {
@@ -194,17 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Initialize Components
-    function init() {
-        slideOne();
-        slideTwo();
-        
-        // Initialize feather icons if available
-        if (typeof feather !== 'undefined') {
-            feather.replace();
-        }
-    }
-
     // Expose functions to global scope
     window.allowDrop = allowDrop;
     window.drag = drag;
@@ -215,7 +273,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleChat = toggleChat;
     window.handleKeyPress = handleKeyPress;
     window.sendMessage = sendMessage;
+    window.startPlayback = startPlayback;
+    window.stopPlayback = stopPlayback;
 
-    // Initialize on page load
-    window.onload = init;
+    // Initialize Components on page load
+    init();
+    function init() {
+        slideOne();
+        slideTwo();
+    }
+
+    // Event listeners for sliders
+    document.getElementById('slider-1').addEventListener('input', slideOne);
+    document.getElementById('slider-2').addEventListener('input', slideTwo);
 });
